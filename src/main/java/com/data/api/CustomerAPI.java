@@ -61,7 +61,7 @@ public class CustomerAPI {
             return ResponseEntity.notFound().build();
         }
 
-        if (customer.getId() !=id || customer.getName().isBlank() || customer.getEmail().isBlank()) {
+        if(customer.getEmail().isBlank() || customer.getName().isBlank() || customer.getPassword().isBlank()){
             return ResponseEntity.badRequest().build();
         }
 
@@ -69,6 +69,7 @@ public class CustomerAPI {
         Customer existingCustomer = existingCustomerOpt.get();
         existingCustomer.setName(customer.getName());
         existingCustomer.setEmail(customer.getEmail());
+        existingCustomer.setPassword(customer.getPassword());
 
         // save customer
         repo.save(existingCustomer);

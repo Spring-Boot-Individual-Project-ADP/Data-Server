@@ -43,6 +43,7 @@ public class CustomerAPITests {
         Customer customer = new Customer();
         customer.setName("Test");
         customer.setEmail("test@example.com");
+        customer.setPassword("TestPassword");
 
         URI location = template.postForLocation("/customers", customer, Customer.class);
         assertNotNull(location);
@@ -52,6 +53,7 @@ public class CustomerAPITests {
         assertNotNull(customer.getId());
         assertEquals("Test", customer.getName());
         assertEquals("test@example.com", customer.getEmail());
+        assertEquals("TestPassword", customer.getPassword());
     }
 
     @Test
