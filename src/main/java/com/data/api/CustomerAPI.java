@@ -35,6 +35,10 @@ public class CustomerAPI {
 
     @PostMapping("/customers")
     public ResponseEntity<?> addCustomer(@RequestBody Customer customer) {
+        if(customer.getName().isBlank() || customer.getEmail().isBlank()){
+            return ResponseEntity.badRequest().build();
+        }
+
         Customer savedCustomer = repo.save(customer);
 
         URI location =
@@ -55,6 +59,10 @@ public class CustomerAPI {
 
         if (existingCustomerOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
+        }
+
+        if (customer.getId() !=id || customer.getName().isBlank() || customer.getEmail().isBlank()) {
+            return ResponseEntity.badRequest().build();
         }
 
         // update existing customer
