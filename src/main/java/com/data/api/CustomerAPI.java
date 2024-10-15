@@ -57,16 +57,13 @@ public class CustomerAPI {
     @PutMapping("/customers/{id}")
     public ResponseEntity<?> putCustomer(
             @RequestBody Customer newCustomer,
-            @PathVariable("id") long customerId) {
+            @PathVariable("id") long id) {
 
-
-        if (newCustomer.getId() != customerId || newCustomer.getName() == null || newCustomer.getEmail() == null) {
+        if (newCustomer.getId() != id || newCustomer.getName() == null || newCustomer.getEmail() == null) {
             return ResponseEntity.badRequest().build();
         }
 
-
         repo.save(newCustomer);
-
 
         return ResponseEntity.ok().build();
     }

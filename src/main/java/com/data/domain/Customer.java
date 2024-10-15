@@ -6,8 +6,8 @@ import jakarta.persistence.*;
 @Table(name="CUSTOMERS")
 public class Customer {
     @Id
-    @GeneratedValue(strategy= GenerationType.IDENTITY)
-    private int id;
+    @GeneratedValue(strategy=GenerationType.IDENTITY)
+    long id;
 
     @Column(name="CUSTOMER_NAME")
     String name;
@@ -19,7 +19,7 @@ public class Customer {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(long id) {
         this.id = id;
     }
 
