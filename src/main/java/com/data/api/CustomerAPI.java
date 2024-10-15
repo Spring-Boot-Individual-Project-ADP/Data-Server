@@ -3,11 +3,14 @@ package com.data.api;
 import com.data.domain.Customer;
 import com.data.repository.CustomerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.util.Iterator;
 import java.util.Optional;
 
 @RestController
@@ -28,7 +31,7 @@ public class CustomerAPI {
     }
 
     @GetMapping("/customers/{id}")
-    public ResponseEntity<?> getCustomer(@PathVariable long id) {
+    public ResponseEntity<?> getCustomer(@PathVariable("id") long id) {
         Optional<Customer> customer = repo.findById(id);
         return ResponseEntity.ok(customer);
     }
@@ -52,33 +55,24 @@ public class CustomerAPI {
     }
 
     @PutMapping("/customers/{id}")
-    public ResponseEntity<?> updateCustomer(@PathVariable long id, @RequestBody Customer customer) {
+    public ResponseEntity<?> putCustomer(
+            @RequestBody Customer newCustomer,
+            @PathVariable("id") long customerId) {
 
-        // check if customer exists
-        Optional<Customer> existingCustomerOpt = repo.findById(id);
 
-        if (existingCustomerOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        if(customer.getEmail().isBlank() || customer.getName().isBlank() || customer.getPassword().isBlank()){
+        if (newCustomer.getId() != customerId || newCustomer.getName() == null || newCustomer.getEmail() == null) {
             return ResponseEntity.badRequest().build();
         }
 
-        // update existing customer
-        Customer existingCustomer = existingCustomerOpt.get();
-        existingCustomer.setName(customer.getName());
-        existingCustomer.setEmail(customer.getEmail());
-        existingCustomer.setPassword(customer.getPassword());
 
-        // save customer
-        repo.save(existingCustomer);
+        repo.save(newCustomer);
+
 
         return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/customers/{id}")
-    public ResponseEntity<?> deleteCustomer(@PathVariable long id) {
+    public ResponseEntity<?> deleteCustomer(@PathVariable("id") long id) {
         Optional<Customer> existingCustomer = repo.findById(id);
         if (existingCustomer.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -86,5 +80,34 @@ public class CustomerAPI {
 
         repo.delete(existingCustomer.get());
         return ResponseEntity.ok().build();
+    }
+
+    //lookupCustomerByName GET
+    @GetMapping("/customers/byname/{username}")
+    public ResponseEntity<?> lookupCustomerByNameGet(@PathVariable("username") String username,
+                                                     UriComponentsBuilder uri) {
+        Iterator<Customer> customers = repo.findAll().iterator();
+        while(customers.hasNext()) {
+            Customer cust = customers.next();
+            if(cust.getName().equalsIgnoreCase(username)) {
+                ResponseEntity<?> response = ResponseEntity.ok(cust);
+                return response;
+            }
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+    }
+
+    //lookupCustomerByName POST
+    @PostMapping("/customers/byname")
+    public ResponseEntity<?> lookupCustomerByNamePost(@RequestBody String username, UriComponentsBuilder uri) {
+        Iterator<Customer> customers = repo.findAll().iterator();
+        while(customers.hasNext()) {
+            Customer cust = customers.next();
+            if(cust.getName().equals(username)) {
+                ResponseEntity<?> response = ResponseEntity.ok(cust);
+                return response;
+            }
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
     }
 }
