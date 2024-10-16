@@ -83,6 +83,7 @@ public class CustomerAPI {
     @GetMapping("/customers/byname/{username}")
     public ResponseEntity<?> lookupCustomerByNameGet(@PathVariable("username") String username,
                                                      UriComponentsBuilder uri) {
+
         Iterator<Customer> customers = repo.findAll().iterator();
         while(customers.hasNext()) {
             Customer cust = customers.next();

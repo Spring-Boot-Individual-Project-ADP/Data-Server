@@ -13,8 +13,8 @@ import java.io.IOException;
 public class AuthFilter implements Filter {
 
     //public static Key key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
-    private String auth_scope = "com.webage.auth.apis";
-    private String api_scope = "com.webage.data.apis";
+    private String auth_scope = "com.auth.apis";
+    private String api_scope = "com.data.apis";
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
