@@ -1,9 +1,8 @@
-package com.data;
+package com.data.tests;
 
 import com.data.api.CustomerAPI;
 import com.data.domain.Customer;
 import com.data.repository.CustomerRepository;
-import com.data.security.AuthFilter;
 import com.data.security.JWTHelper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeAll;
@@ -11,8 +10,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -74,14 +71,14 @@ public class CustomerAPITests {
     void createNewCustomerTest() throws Exception {
         Customer newCustomer = new Customer("John Doe", "john@example.com", "password");
 
-        // Mock the repository's save method to assign an ID
+        // Mock the repository's save method
         when(customerRepository.save(any(Customer.class))).thenAnswer(invocation -> {
             Customer customer = invocation.getArgument(0);
-            customer.setId(1L); // Simulate saving and assigning an ID
+            customer.setId(1L); // Set ID
             return customer;
         });
 
-        // Perform the POST request
+        // POST request
         mockMvc.perform(post("/customers")
                         .contentType("application/json")
                         .content(new ObjectMapper().writeValueAsString(newCustomer))
@@ -109,7 +106,7 @@ public class CustomerAPITests {
         // Create an updated customer object
         Customer updatedCustomer = new Customer(1L, "John Doe Updated", "john.updated@example.com", "newpassword");
 
-        // Perform the PUT request
+        // PUT request
         mockMvc.perform(put("/customers/{id}", 1L)
                         .contentType("application/json")
                         .content(new ObjectMapper().writeValueAsString(updatedCustomer))
@@ -128,7 +125,7 @@ public class CustomerAPITests {
 
         when(customerRepository.findById(1L)).thenReturn(Optional.of(new Customer(1L, "John Doe", "john@example.com", "password")));
 
-        // Perform the DELETE request for an existing customer
+        // DELETE request for an existing customer
         mockMvc.perform(delete("/customers/{id}", 1L)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + validToken))
                 .andExpect(status().isNoContent());
@@ -142,26 +139,13 @@ public class CustomerAPITests {
         // Mock behavior for non-existent customer
         when(customerRepository.existsById(2L)).thenReturn(false);
 
-        // Perform the DELETE request for a non-existing customer
+        // DELETE request for a non-existing customer
         mockMvc.perform(delete("/customers/{id}", 2L)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + validToken))
                 .andExpect(status().isNotFound());
 
         // Verify the delete method was never called
         verify(customerRepository, never()).deleteById(2L);
-    }
-
-
-
-
-    @Configuration
-    static class TestConfig {
-
-
-        @Bean
-        public AuthFilter authFilter() {
-            return new AuthFilter(); // Ensure that the AuthFilter is registered as a bean
-        }
     }
 }
 
