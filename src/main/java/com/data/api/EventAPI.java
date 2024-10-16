@@ -30,6 +30,11 @@ public class EventAPI {
     @GetMapping("/{id}")
     public ResponseEntity<?> getEvent(@PathVariable("id") long id) {
         Optional<Event> event = repo.findById(id);
+
+        if(event.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
         return ResponseEntity.ok(event);
     }
 

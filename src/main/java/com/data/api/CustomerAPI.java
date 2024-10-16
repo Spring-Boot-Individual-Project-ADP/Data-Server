@@ -33,6 +33,11 @@ public class CustomerAPI {
     @GetMapping("/customers/{id}")
     public ResponseEntity<?> getCustomer(@PathVariable("id") long id) {
         Optional<Customer> customer = repo.findById(id);
+
+        if(customer.isEmpty()){
+            return ResponseEntity.notFound().build();
+        }
+
         return ResponseEntity.ok(customer);
     }
 
