@@ -1,7 +1,9 @@
 package com.data.api;
 
 import com.data.repository.EventRepository;
+import com.data.repository.RegistrationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.data.domain.Event;
@@ -15,6 +17,9 @@ import java.util.Optional;
 public class EventAPI {
     @Autowired
     EventRepository repo;
+
+    @Autowired
+    RegistrationRepository registrationRepository;
 
     @GetMapping
     public ResponseEntity<?> getAllEvents() {
@@ -63,6 +68,11 @@ public class EventAPI {
 
         if(exisitingEvent.isEmpty()) {
             return ResponseEntity.notFound().build();
+        }
+
+        // check whether any registrations exist for the event
+        if(registrationRepository.existsByEventId(id)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Cannot delete event with registrations");
         }
 
         repo.delete(exisitingEvent.get());
