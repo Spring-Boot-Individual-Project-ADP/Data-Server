@@ -46,4 +46,21 @@ public class Customer {
     public void setPassword(String password) {
         this.password = password;
     }
+
+    public Customer(){
+
+    }
+
+    public Customer(long id, String name, String email, String password) {
+        this.id = id;
+        this.password = password;
+        this.email = email;
+        this.name = name;
+    }
+
+    public Customer( String name, String email, String password) {
+        this.password = password;
+        this.email = email;
+        this.name = name;
+    }
 }

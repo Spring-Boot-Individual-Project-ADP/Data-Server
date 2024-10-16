@@ -80,8 +80,8 @@ public class CustomerAPI {
             return ResponseEntity.notFound().build();
         }
 
-        repo.delete(existingCustomer.get());
-        return ResponseEntity.ok().build();
+        repo.deleteById(id); // Directly delete by ID
+        return ResponseEntity.noContent().build(); // Return 204 No Content
     }
 
     //lookupCustomerByName GET

@@ -1,83 +1,168 @@
 package com.data;
 
+import com.data.api.CustomerAPI;
 import com.data.domain.Customer;
+import com.data.repository.CustomerRepository;
+import com.data.security.AuthFilter;
+import com.data.security.JWTHelper;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
-import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
+import org.springframework.test.web.servlet.MockMvc;
 
-import java.net.URI;
+import java.util.List;
+import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@WebMvcTest(CustomerAPI.class)
 public class CustomerAPITests {
+
+    private static String validToken;
+
     @Autowired
-    TestRestTemplate template;
+    private MockMvc mockMvc;
 
-    @Test
-    public void testGetList() {
+    @MockBean
+    private CustomerRepository customerRepository;
 
-        Customer[] customers =
-                template.getForObject("/customers", Customer[].class);
-
-        assertNotNull(customers);
-        assertNotNull(customers[0]);
-        assertTrue(customers.length > 0);
+    @BeforeAll
+    public static void setup() {
+        validToken = JWTHelper.createToken("com.data.apis");
     }
 
     @Test
-    public void testGetCustomer() {
-        Customer customer = template.getForObject("/customers/1", Customer.class);
+    void getAllCustomersTest() throws Exception {
+        // Mock repository response
+        when(customerRepository.findAll()).thenReturn(List.of(
+                new Customer(1L, "John Doe", "john@example.com", "password"),
+                new Customer(2L, "Jane Doe", "jane@example.com", "password")
+        ));
 
-        assertNotNull(customer);
-        assertEquals(1, customer.getId());
-        assertEquals("Bruce", customer.getName());
+        mockMvc.perform(get("/customers").header(HttpHeaders.AUTHORIZATION, "Bearer " + validToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size()").value(2))
+                .andExpect(jsonPath("$[0].name", is("John Doe")))
+                .andExpect(jsonPath("$[1].name", is("Jane Doe")));
     }
 
     @Test
-    public void testPost() {
+    void getCustomerByIdTest() throws Exception {
+        // Mock repository response for a specific customer
+        when(customerRepository.findById(1L)).thenReturn(Optional.of(new Customer(1L, "John Doe", "john@example.com", "password")));
 
-        Customer customer = new Customer();
-        customer.setName("Test");
-        customer.setEmail("test@example.com");
-        customer.setPassword("TestPassword");
-
-        URI location = template.postForLocation("/customers", customer, Customer.class);
-        assertNotNull(location);
-
-        customer = template.getForObject(location, Customer.class);
-        assertNotNull(customer);
-        assertNotNull(customer.getId());
-        assertEquals("Test", customer.getName());
-        assertEquals("test@example.com", customer.getEmail());
-        assertEquals("TestPassword", customer.getPassword());
+        mockMvc.perform(get("/customers/1").header(HttpHeaders.AUTHORIZATION, "Bearer " + validToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(1)))
+                .andExpect(jsonPath("$.name", is("John Doe")))
+                .andExpect(jsonPath("$.email", is("john@example.com")));
     }
 
     @Test
-    public void testPut() {
+    void createNewCustomerTest() throws Exception {
+        Customer newCustomer = new Customer("John Doe", "john@example.com", "password");
 
-        String path = "/customers/2";
-        String newValue = "NewValue" + Math.random();
+        // Mock the repository's save method to assign an ID
+        when(customerRepository.save(any(Customer.class))).thenAnswer(invocation -> {
+            Customer customer = invocation.getArgument(0);
+            customer.setId(1L); // Simulate saving and assigning an ID
+            return customer;
+        });
 
-        Customer customer = template.getForObject(path, Customer.class );
+        // Perform the POST request
+        mockMvc.perform(post("/customers")
+                        .contentType("application/json")
+                        .content(new ObjectMapper().writeValueAsString(newCustomer))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + validToken))
+                .andExpect(status().isCreated());
 
-        customer.setName(newValue);
-        template.put(path, customer);
-
-        customer = template.getForObject(path, Customer.class );
-
-        assertEquals(newValue, customer.getName());
+        // Verify customer saved correctly
+        verify(customerRepository).save(any(Customer.class));
     }
 
     @Test
-    public void testDelete() {
-        String path = "/customers/2";
-        template.delete(path);
-        Customer customer = template.getForObject(path, Customer.class);
+    void updateCustomerTest() throws Exception {
+        Customer existingCustomer = new Customer(1L, "John Doe", "john@example.com", "password");
 
-        assertNull(customer);
+        // Mock existing customer and save behavior
+        when(customerRepository.findById(1L)).thenReturn(Optional.of(existingCustomer));
+        when(customerRepository.save(any(Customer.class))).thenAnswer(invocation -> {
+            Customer updatedCustomer = invocation.getArgument(0);
+            existingCustomer.setName(updatedCustomer.getName());
+            existingCustomer.setEmail(updatedCustomer.getEmail());
+            existingCustomer.setPassword(updatedCustomer.getPassword());
+            return existingCustomer;
+        });
+
+        // Create an updated customer object
+        Customer updatedCustomer = new Customer(1L, "John Doe Updated", "john.updated@example.com", "newpassword");
+
+        // Perform the PUT request
+        mockMvc.perform(put("/customers/{id}", 1L)
+                        .contentType("application/json")
+                        .content(new ObjectMapper().writeValueAsString(updatedCustomer))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + validToken))
+                .andExpect(status().isOk());
+
+        // Verify customer updated correctly
+        assertEquals("John Doe Updated", existingCustomer.getName());
+        assertEquals("john.updated@example.com", existingCustomer.getEmail());
+    }
+
+    @Test
+    void deleteCustomerTest() throws Exception {
+        // Mock behavior for existing customer
+        when(customerRepository.existsById(1L)).thenReturn(true);
+
+        when(customerRepository.findById(1L)).thenReturn(Optional.of(new Customer(1L, "John Doe", "john@example.com", "password")));
+
+        // Perform the DELETE request for an existing customer
+        mockMvc.perform(delete("/customers/{id}", 1L)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + validToken))
+                .andExpect(status().isNoContent());
+
+        // Verify the delete method was called
+        verify(customerRepository).deleteById(1L);
+    }
+
+    @Test
+    void deleteNonExistentCustomerTest() throws Exception {
+        // Mock behavior for non-existent customer
+        when(customerRepository.existsById(2L)).thenReturn(false);
+
+        // Perform the DELETE request for a non-existing customer
+        mockMvc.perform(delete("/customers/{id}", 2L)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + validToken))
+                .andExpect(status().isNotFound());
+
+        // Verify the delete method was never called
+        verify(customerRepository, never()).deleteById(2L);
+    }
+
+
+
+
+    @Configuration
+    static class TestConfig {
+
+
+        @Bean
+        public AuthFilter authFilter() {
+            return new AuthFilter(); // Ensure that the AuthFilter is registered as a bean
+        }
     }
 }
+
+
